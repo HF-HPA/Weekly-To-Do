@@ -1,1 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Planner &amp; Social Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --surface: #efe6d0;
+    --surface-alt: #e3d7b8;
+    --text: #201a13;
+    --muted: #6e6452;
+    --on-dark: #ede1c4;
+    --on-dark-muted: #a89a7c;
+    --primary: #7c0f1e;
+    --primary-dark: #5c0a15;
+    --primary-bright: #b5222f;
+    --border: #c9ba90;
+    --border-dark: #332c22;
+    --danger: #c23b3b;
+    --radius: 4px;
+    --shadow: 0 3px 10px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "EB Garamond", Georgia, "Times New Roman", serif;
+    font-size: 1.05rem;
+    background: var(--bg);
+    color: var(--on-dark);
+  }
+  h1, h2, h3 { font-family: "Cinzel", Georgia, serif; font-weight: 600; letter-spacing: 0.02em; }
+  .app { max-width: 900px; margin: 0 auto; padding: 24px 16px 40px; }
 
+  header { text-align: center; }
+  header h1 {
+    font-size: 1.9rem; margin: 4px 0; color: var(--on-dark);
+    text-shadow: 0 0 14px rgba(124,15,30,0.55), 0 2px 2px rgba(0,0,0,0.8);
+  }
+  .app-sub { font-weight: 400; font-family: "EB Garamond", serif; font-style: italic; color: var(--on-dark-muted); font-size: 1.1rem; }
+
+  .harlequin-band {
+    position: relative;
+    height: 176px; margin: 24px 0;
+    overflow: hidden;
+    border-top: 3px solid var(--primary);
+    border-bottom: 3px solid var(--primary);
+    background: var(--bg);
+  }
+  .harlequin-band::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 80px;
+    transform-origin: top;
+    transform: scaleY(2.2) translateZ(0);
+    backface-visibility: hidden;
+    background-color: var(--surface);
+    background-image:
+      linear-gradient(45deg, var(--bg) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--bg) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--bg) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--bg) 75%);
+    background-size: 26.667px 26.667px;
+  }
+
+  .tabs { display: flex; gap: 4px; justify-content: center; margin: 4px 0 24px; border-bottom: 1px solid var(--border-dark); overflow-x: auto; }
+  .tab-btn {
+    background: none; border: none; padding: 10px 16px; font-size: 0.95rem; font-family: "Cinzel", serif;
+    letter-spacing: 0.03em; color: var(--on-dark-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--on-dark); }
+  .tab-btn.active { color: var(--primary-bright); border-bottom-color: var(--primary); font-weight: 700; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  main h2 { color: var(--on-dark); font-size: 1.3rem; margin-bottom: 4px; }
+  .hint { color: var(--on-dark-muted); font-size: 0.9rem; margin-top: -2px; margin-bottom: 16px; }
+  .empty-hint { color: var(--on-dark-muted); font-size: 0.9rem; }
+  .manage-task-list .empty-hint { color: var(--muted); }
+
+  .quick-add { display: flex; gap: 8px; margin-bottom: 16px; }
+  .quick-add input {
+    flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); color: var(--text); font-size: 0.95rem; font-family: inherit;
+  }
+  button { font-family: inherit; }
+  .quick-add button, .manage-add-form button {
+    padding: 10px 16px; border: none; border-radius: var(--radius); background: var(--primary);
+    color: var(--on-dark); cursor: pointer; font-size: 0.95rem;
+  }
+  .quick-add button:hover, .manage-add-form button:hover { background: var(--primary-dark); }
+
+  .task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .task-item {
+    display: flex; align-items: center; justify-content: space-between; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow);
+  }
+  .task-label { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
+  .task-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); flex-shrink: 0; }
+  .task-text.done { text-decoration: line-through; color: var(--muted); }
+  .icon-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 4px 8px; border-radius: 3px; }
+  .icon-btn:hover { background: var(--surface-alt); color: var(--danger); }
+
+  .manage-day {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow);
+  }
+  .manage-day h3 { margin: 0 0 8px; font-size: 1rem; color: var(--text); }
+  .today-badge { font-size: 0.68rem; font-family: "Cinzel", serif; background: var(--primary); color: var(--on-dark); padding: 2px 7px; border-radius: 999px; vertical-align: middle; }
+  .manage-task-list { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-direction: column; gap: 6px; }
+  .manage-task { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 6px 8px; border-radius: 3px; background: var(--surface-alt); }
+  .manage-add-form { display: flex; gap: 8px; }
+  .manage-add-form input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-alt); color: var(--text); font-family: inherit; }
+
+  .calendar-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .calendar-controls button {
+    background: transparent; border: 1px solid var(--border-dark); border-radius: 3px; padding: 6px 12px;
+    cursor: pointer; color: var(--on-dark-muted); font-family: "Cinzel", serif; font-size: 0.85rem;
+  }
+  .calendar-controls button:hover { border-color: var(--primary); color: var(--primary-bright); }
+  #cal-month-label { flex: 1; text-align: center; margin: 0; color: var(--on-dark); font-size: 1.15rem; }
+  .export-row { text-align: center; margin-bottom: 20px; }
+  .export-row button {
+    background: transparent; border: 1px solid var(--primary); border-radius: 3px; padding: 8px 16px;
+    cursor: pointer; color: var(--primary-bright); font-family: "Cinzel", serif; font-size: 0.82rem; letter-spacing: 0.03em;
+  }
+  .export-row button:hover { background: var(--primary); color: var(--on-dark); }
+
+  .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 20px; }
+  .cal-dow { text-align: center; font-size: 0.72rem; font-family: "Cinzel", serif; letter-spacing: 0.05em; color: var(--on-dark-muted); font-weight: 600; padding-bottom: 4px; }
+  .cal-cell {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 3px;
+    min-height: 74px; padding: 6px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow);
+  }
+  .cal-cell-empty { background: transparent; border: none; box-shadow: none; }
+  .cal-cell-today { border: 2px solid var(--primary-bright); }
+  .cal-cell-head { display: flex; justify-content: space-between; align-items: center; }
+  .cal-daynum { font-size: 0.8rem; color: var(--muted); }
+  .cal-add-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; line-height: 1; padding: 2px 6px; border-radius: 3px; }
+  .cal-add-btn:hover { background: var(--surface-alt); color: var(--primary); }
+  .cal-chips { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .cal-chip {
+    font-size: 0.66rem; background: var(--bg); color: var(--on-dark); border-left: 3px solid var(--chip-color); padding: 2px 5px;
+    border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .upcoming-heading { margin-top: 4px; color: var(--on-dark); }
+  .post-list { display: flex; flex-direction: column; gap: 8px; }
+  .post-row {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 12px; box-shadow: var(--shadow);
+  }
+  .post-row-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .post-chip { font-size: 0.72rem; padding: 2px 9px; border-radius: 999px; background: var(--bg); color: var(--on-dark); border: 1px solid var(--chip-color); }
+  .post-date { font-size: 0.85rem; color: var(--muted); }
+  .post-status { font-size: 0.7rem; padding: 3px 9px; border-radius: 999px; margin-left: auto; font-family: "Cinzel", serif; letter-spacing: 0.02em; }
+  .post-status.status-idea { background: #3a352c; color: #c9bfa8; }
+  .post-status.status-drafted { background: #5c4413; color: #e8cf8a; }
+  .post-status.status-scheduled { background: var(--primary-dark); color: #f3d9d9; }
+  .post-status.status-posted { background: #111111; color: var(--on-dark); border: 1px solid var(--border-dark); }
+  .post-row-caption { font-size: 0.95rem; margin-bottom: 4px; white-space: pre-wrap; }
+  .post-row-notes { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; white-space: pre-wrap; }
+  .post-link { color: var(--primary); font-size: 0.85rem; text-decoration: none; border-bottom: 1px solid var(--primary); }
+  .post-link:hover { color: var(--primary-dark); }
+  .link-btn { background: none; border: none; color: var(--primary); cursor: pointer; padding: 0; font-size: 0.85rem; font-family: inherit; }
+
+  footer {
+    display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 16px;
+    border-top: 1px solid var(--border-dark); font-size: 0.85rem; color: var(--on-dark-muted); flex-wrap: wrap; gap: 8px;
+  }
+  .save-error { color: var(--danger); }
+  .footer-actions { display: flex; gap: 12px; align-items: center; }
+  .footer-actions button, .import-label {
+    background: transparent; border: 1px solid var(--border-dark); padding: 6px 10px; border-radius: 3px;
+    cursor: pointer; color: var(--on-dark-muted); font-size: 0.85rem;
+  }
+  .footer-actions button:hover, .import-label:hover { border-color: var(--primary); color: var(--primary-bright); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .modal-overlay[hidden] { display: none; }
+  .modal {
+    background: var(--surface); color: var(--text); border-radius: 6px; padding: 20px; width: 100%; max-width: 420px;
+    max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.6); border: 1px solid var(--border);
+  }
+  .modal h3 { margin-top: 0; color: var(--text); }
+  #post-form label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; }
+  #post-form input, #post-form select, #post-form textarea {
+    display: block; width: 100%; margin-top: 4px; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 3px; background: var(--surface-alt); color: var(--text); font-family: inherit; font-size: 0.9rem;
+  }
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .modal-actions-right { display: flex; gap: 8px; }
+  .modal-actions button { padding: 8px 14px; border-radius: 3px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; color: var(--text); }
+  .modal-actions button[type="submit"] { background: var(--primary); border-color: var(--primary); color: var(--on-dark); }
+  .danger { color: var(--danger) !important; border-color: var(--danger) !important; }
+
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-dark); border: 2px solid var(--bg); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary-dark); }
+  * { scrollbar-color: var(--border-dark) var(--bg); }
+
+  @media (max-width: 480px) {
+    .calendar-grid { gap: 3px; }
+    .cal-cell { min-height: 60px; padding: 4px; }
+    header h1 { font-size: 1.4rem; }
+    .harlequin-band { height: 123px; }
+    .harlequin-band::before { height: 56px; background-size: 18.667px 18.667px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Weekly Planner <span class="app-sub">&amp; Social Calendar</span></h1>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="today">Today</button>
+      <button class="tab-btn" data-tab="manage">Manage Week</button>
+      <button class="tab-btn" data-tab="calendar">Social Calendar</button>
+    </nav>
+  </header>
+  <div class="harlequin-band" aria-hidden="true"></div>
+
+  <main>
+    <section id="tab-today" class="tab-panel active">
+      <h2 id="today-date-heading"></h2>
+      <form id="quick-add-form" class="quick-add">
+        <input type="text" id="quick-add-input" placeholder="Add a task for today..." required maxlength="200">
+        <button type="submit">Add</button>
+      </form>
+      <ul id="today-list" class="task-list"></ul>
+      <p id="today-empty" class="empty-hint" hidden>Nothing on today's list yet. Add something above, or set up recurring tasks in "Manage Week".</p>
+    </section>
+
+    <section id="tab-manage" class="tab-panel">
+      <h2>Weekly Recurring Tasks</h2>
+      <p class="hint">These tasks repeat every week. Checkboxes on the Today tab reset automatically each new week.</p>
+      <div id="manage-days"></div>
+    </section>
+
+    <section id="tab-calendar" class="tab-panel">
+      <h2>Social Media Calendar</h2>
+      <div class="calendar-controls">
+        <button id="cal-prev" aria-label="Previous month">&larr;</button>
+        <h3 id="cal-month-label"></h3>
+        <button id="cal-next" aria-label="Next month">&rarr;</button>
+        <button id="cal-today-btn">Today</button>
+      </div>
+      <div id="calendar-grid" class="calendar-grid"></div>
+      <div class="export-row">
+        <button id="export-month-btn" type="button">Export this month as a shareable page</button>
+      </div>
+
+      <h3 class="upcoming-heading">All Posts</h3>
+      <div id="post-list" class="post-list"></div>
+    </section>
+  </main>
+
+  <div class="harlequin-band" aria-hidden="true"></div>
+  <footer>
+    <span id="save-indicator">Saved locally in your browser</span>
+    <div class="footer-actions">
+      <button id="export-btn" type="button">Export backup</button>
+      <label class="import-label">Import backup<input type="file" id="import-input" accept="application/json" hidden></label>
+    </div>
+  </footer>
+</div>
+
+<div id="post-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3 id="post-modal-title">New Post</h3>
+    <form id="post-form">
+      <input type="hidden" id="post-id">
+      <label>Date <input type="date" id="post-date" required></label>
+      <label>Time <input type="time" id="post-time"></label>
+      <label>Platform
+        <select id="post-platform">
+          <option>Instagram</option>
+          <option>Facebook</option>
+          <option>TikTok</option>
+          <option>X (Twitter)</option>
+          <option>LinkedIn</option>
+          <option>YouTube</option>
+          <option>Pinterest</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label>Status
+        <select id="post-status">
+          <option>Idea</option>
+          <option>Drafted</option>
+          <option>Scheduled</option>
+          <option>Posted</option>
+        </select>
+      </label>
+      <label>Link to post (optional) <input type="url" id="post-link" placeholder="https://..."></label>
+      <label>Caption / post idea <textarea id="post-caption" rows="3" maxlength="2000"></textarea></label>
+      <label>Notes / hashtags <textarea id="post-notes" rows="2" maxlength="1000"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" id="post-delete-btn" class="danger" hidden>Delete</button>
+        <div class="modal-actions-right">
+          <button type="button" id="post-cancel-btn">Cancel</button>
+          <button type="submit">Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "weeklyPlannerData_v1";
+  var WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var PLATFORM_COLORS = {
+    "Instagram": "#b8375a",
+    "Facebook": "#46608c",
+    "TikTok": "#5a5568",
+    "X (Twitter)": "#3d3a44",
+    "LinkedIn": "#3d5a99",
+    "YouTube": "#9c3b2e",
+    "Pinterest": "#7a2340",
+    "Other": "#7a6f57"
+  };
+  var STATUS_EXPORT_COLORS = {
+    "Idea": { bg: "#3a352c", fg: "#c9bfa8" },
+    "Drafted": { bg: "#5c4413", fg: "#e8cf8a" },
+    "Scheduled": { bg: "#5c0a15", fg: "#f3d9d9" },
+    "Posted": { bg: "#111111", fg: "#ede1c4" }
+  };
+
+  function uid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+  }
+
+  function escapeHtml(str) {
+    return String(str == null ? "" : str).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+
+  function isSafeUrl(url) {
+    return typeof url === "string" && /^https?:\/\//i.test(url.trim());
+  }
+
+  function defaultData() {
+    var todos = {};
+    WEEKDAYS.forEach(function (d) { todos[d] = []; });
+    return { version: 1, todos: todos, completions: {}, posts: [] };
+  }
+
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultData();
+      var parsed = JSON.parse(raw);
+      var d = defaultData();
+      if (parsed && parsed.todos) {
+        Object.keys(d.todos).forEach(function (k) {
+          if (Array.isArray(parsed.todos[k])) d.todos[k] = parsed.todos[k];
+        });
+      }
+      if (parsed && parsed.completions && typeof parsed.completions === "object") d.completions = parsed.completions;
+      if (parsed && Array.isArray(parsed.posts)) d.posts = parsed.posts;
+      return d;
+    } catch (e) {
+      console.warn("Could not read saved planner data, starting fresh.", e);
+      return defaultData();
+    }
+  }
+
+  var data = loadData();
+  var saveTimer = null;
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      flashSaved(false);
+    } catch (e) {
+      console.error("Save failed", e);
+      flashSaved(true);
+    }
+  }
+
+  function flashSaved(isError) {
+    var el = document.getElementById("save-indicator");
+    if (!el) return;
+    el.classList.toggle("save-error", !!isError);
+    el.textContent = isError ? "Could not save (browser storage full or blocked)" : "Saved ✓";
+    clearTimeout(saveTimer);
+    if (!isError) {
+      saveTimer = setTimeout(function () {
+        el.textContent = "Saved locally in your browser";
+      }, 1500);
+    }
+  }
+
+  // ISO week key so completions reset automatically each new week
+  function getWeekKey(date) {
+    var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    var dayNum = (d.getUTCDay() + 6) % 7;
+    d.setUTCDate(d.getUTCDate() - dayNum + 3);
+    var firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    var firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+    firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
+    var weekNum = 1 + Math.round((d - firstThursday) / (7 * 24 * 3600 * 1000));
+    return d.getUTCFullYear() + "-W" + String(weekNum).padStart(2, "0");
+  }
+
+  function formatDateISO(d) {
+    var y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function formatDateDisplay(iso) {
+    var d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  function formatTimeDisplay(t) {
+    var parts = t.split(":");
+    var h = Number(parts[0]), m = Number(parts[1]);
+    var ampm = h >= 12 ? "PM" : "AM";
+    var h12 = ((h + 11) % 12) + 1;
+    return h12 + ":" + String(m).padStart(2, "0") + " " + ampm;
+  }
+
+  function slug(s) { return String(s).toLowerCase().replace(/\s+/g, "-"); }
+  function platformColor(p) { return PLATFORM_COLORS[p] || PLATFORM_COLORS.Other; }
+  function statusExportColors(s) { return STATUS_EXPORT_COLORS[s] || { bg: "#333333", fg: "#cccccc" }; }
+
+  function todayInfo() {
+    var now = new Date();
+    var weekday = now.toLocaleDateString("en-US", { weekday: "long" });
+    var weekKey = getWeekKey(now);
+    var dateLabel = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    return { now: now, weekday: weekday, weekKey: weekKey, dateLabel: dateLabel };
+  }
+
+  // ---------- Today tab ----------
+  function renderToday() {
+    var info = todayInfo();
+    document.getElementById("today-date-heading").textContent = info.dateLabel;
+    var list = document.getElementById("today-list");
+    var tasks = data.todos[info.weekday] || [];
+    document.getElementById("today-empty").hidden = tasks.length !== 0;
+    list.innerHTML = tasks.map(function (task) {
+      var checked = !!(data.completions[info.weekKey] && data.completions[info.weekKey][info.weekday] && data.completions[info.weekKey][info.weekday][task.id]);
+      return (
+        '<li class="task-item">' +
+          '<label class="task-label">' +
+            '<input type="checkbox" ' + (checked ? "checked" : "") + ' data-task-id="' + task.id + '">' +
+            '<span class="task-text ' + (checked ? "done" : "") + '">' + escapeHtml(task.text) + "</span>" +
+          "</label>" +
+          '<button class="icon-btn remove-task-btn" data-day="' + info.weekday + '" data-task-id="' + task.id + '" title="Remove from weekly list" aria-label="Remove task">✕</button>' +
+        "</li>"
+      );
+    }).join("");
+  }
+
+  document.getElementById("today-list").addEventListener("change", function (e) {
+    if (e.target.matches('input[type="checkbox"]')) {
+      var id = e.target.dataset.taskId;
+      var info = todayInfo();
+      data.completions[info.weekKey] = data.completions[info.weekKey] || {};
+      data.completions[info.weekKey][info.weekday] = data.completions[info.weekKey][info.weekday] || {};
+      data.completions[info.weekKey][info.weekday][id] = e.target.checked;
+      save();
+      var span = e.target.nextElementSibling;
+      if (span) span.classList.toggle("done", e.target.checked);
+    }
+  });
+
+  document.getElementById("today-list").addEventListener("click", function (e) {
+    if (e.target.matches(".remove-task-btn")) {
+      var day = e.target.dataset.day, id = e.target.dataset.taskId;
+      data.todos[day] = data.todos[day].filter(function (t) { return t.id !== id; });
+      save();
+      renderToday();
+      renderManage();
+    }
+  });
+
+  document.getElementById("quick-add-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("quick-add-input");
+    var text = input.value.trim();
+    if (!text) return;
+    var info = todayInfo();
+    data.todos[info.weekday].push({ id: uid(), text: text });
+    input.value = "";
+    save();
+    renderToday();
+    renderManage();
+  });
+
+  // ---------- Manage Week tab ----------
+  function renderManage() {
+    var container = document.getElementById("manage-days");
+    var todayWeekday = todayInfo().weekday;
+    container.innerHTML = WEEKDAYS.map(function (day) {
+      var tasksHtml = (data.todos[day] || []).map(function (t) {
+        return (
+          '<li class="manage-task">' +
+            "<span>" + escapeHtml(t.text) + "</span>" +
+            '<button class="icon-btn remove-task-btn" data-day="' + day + '" data-task-id="' + t.id + '" aria-label="Remove">✕</button>' +
+          "</li>"
+        );
+      }).join("") || '<li class="empty-hint">No recurring tasks yet.</li>';
+      return (
+        '<div class="manage-day">' +
+          "<h3>" + day + (day === todayWeekday ? ' <span class="today-badge">Today</span>' : "") + "</h3>" +
+          '<ul class="manage-task-list">' + tasksHtml + "</ul>" +
+          '<form class="manage-add-form" data-day="' + day + '">' +
+            '<input type="text" placeholder="Add a task for ' + day + '..." maxlength="200" required>' +
+            '<button type="submit">Add</button>' +
+          "</form>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  document.getElementById("manage-days").addEventListener("submit", function (e) {
+    if (e.target.matches(".manage-add-form")) {
+      e.preventDefault();
+      var day = e.target.dataset.day;
+      var input = e.target.querySelector("input");
+      var text = input.value.trim();
+      if (!text) return;
+      data.todos[day].push({ id: uid(), text: text });
+      save();
+      renderManage();
+      renderToday();
+    }
+  });
+
+  document.getElementById("manage-days").addEventListener("click", function (e) {
+    if (e.target.matches(".remove-task-btn")) {
+      var day = e.target.dataset.day, id = e.target.dataset.taskId;
+      data.todos[day] = data.todos[day].filter(function (t) { return t.id !== id; });
+      save();
+      renderManage();
+      renderToday();
+    }
+  });
+
+  // ---------- Tabs ----------
+  document.querySelectorAll(".tab-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+      if (btn.dataset.tab === "calendar") renderCalendar();
+    });
+  });
+
+  // ---------- Social calendar ----------
+  var calViewDate = new Date();
+
+  function renderCalendar() {
+    var grid = document.getElementById("calendar-grid");
+    var year = calViewDate.getFullYear(), month = calViewDate.getMonth();
+    document.getElementById("cal-month-label").textContent = calViewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+    var html = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(function (l) {
+      return '<div class="cal-dow">' + l + "</div>";
+    }).join("");
+
+    var firstOfMonth = new Date(year, month, 1);
+    var startOffset = (firstOfMonth.getDay() + 6) % 7;
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var todayStr = formatDateISO(new Date());
+
+    for (var i = 0; i < startOffset; i++) {
+      html += '<div class="cal-cell cal-cell-empty"></div>';
+    }
+    for (var day = 1; day <= daysInMonth; day++) {
+      var iso = formatDateISO(new Date(year, month, day));
+      var postsForDay = data.posts.filter(function (p) { return p.date === iso; })
+        .sort(function (a, b) { return (a.time || "").localeCompare(b.time || ""); });
+      var chips = postsForDay.map(function (p) {
+        var tip = p.platform + (p.caption ? " — " + p.caption : "");
+        return '<div class="cal-chip" data-post-id="' + p.id + '" style="--chip-color:' + platformColor(p.platform) + '" title="' + escapeHtml(tip) + '">' + escapeHtml(p.platform) + "</div>";
+      }).join("");
+      html +=
+        '<div class="cal-cell' + (iso === todayStr ? " cal-cell-today" : "") + '">' +
+          '<div class="cal-cell-head">' +
+            '<span class="cal-daynum">' + day + "</span>" +
+            '<button class="cal-add-btn" data-date="' + iso + '" aria-label="Add post">+</button>' +
+          "</div>" +
+          '<div class="cal-chips">' + chips + "</div>" +
+        "</div>";
+    }
+    grid.innerHTML = html;
+  }
+
+  document.getElementById("calendar-grid").addEventListener("click", function (e) {
+    if (e.target.matches(".cal-add-btn")) {
+      openPostModal({ date: e.target.dataset.date });
+    } else if (e.target.matches(".cal-chip")) {
+      var post = data.posts.find(function (p) { return p.id === e.target.dataset.postId; });
+      if (post) openPostModal(post);
+    }
+  });
+
+  document.getElementById("cal-prev").addEventListener("click", function () {
+    calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth() - 1, 1);
+    renderCalendar();
+  });
+  document.getElementById("cal-next").addEventListener("click", function () {
+    calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth() + 1, 1);
+    renderCalendar();
+  });
+  document.getElementById("cal-today-btn").addEventListener("click", function () {
+    calViewDate = new Date();
+    renderCalendar();
+  });
+
+  function renderPostList() {
+    var container = document.getElementById("post-list");
+    var sorted = data.posts.slice().sort(function (a, b) {
+      return (a.date + " " + (a.time || "")).localeCompare(b.date + " " + (b.time || ""));
+    });
+    if (sorted.length === 0) {
+      container.innerHTML = '<p class="empty-hint">No posts planned yet. Click the + on a calendar day to add one.</p>';
+      return;
+    }
+    container.innerHTML = sorted.map(function (p) {
+      var linkHtml = "";
+      if (p.link && isSafeUrl(p.link)) {
+        linkHtml = '<a class="post-link" href="' + escapeHtml(p.link) + '" target="_blank" rel="noopener noreferrer">View post ↗</a>';
+      }
+      return (
+        '<div class="post-row">' +
+          '<div class="post-row-main">' +
+            '<span class="post-chip" style="--chip-color:' + platformColor(p.platform) + '">' + escapeHtml(p.platform) + "</span>" +
+            '<span class="post-date">' + formatDateDisplay(p.date) + (p.time ? " · " + formatTimeDisplay(p.time) : "") + "</span>" +
+            '<span class="post-status status-' + slug(p.status) + '">' + escapeHtml(p.status) + "</span>" +
+          "</div>" +
+          '<div class="post-row-caption">' + escapeHtml(p.caption || "(no caption yet)") + "</div>" +
+          (p.notes ? '<div class="post-row-notes">' + escapeHtml(p.notes) + "</div>" : "") +
+          (linkHtml ? '<div style="margin-bottom:4px;">' + linkHtml + "</div>" : "") +
+          '<button class="link-btn edit-post-btn" data-post-id="' + p.id + '" type="button">Edit</button>' +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  document.getElementById("post-list").addEventListener("click", function (e) {
+    if (e.target.matches(".edit-post-btn")) {
+      var post = data.posts.find(function (p) { return p.id === e.target.dataset.postId; });
+      if (post) openPostModal(post);
+    }
+  });
+
+  // ---------- Post modal ----------
+  var modal = document.getElementById("post-modal");
+
+  function openPostModal(post) {
+    post = post || {};
+    var isEdit = !!post.id;
+    document.getElementById("post-modal-title").textContent = isEdit ? "Edit Post" : "New Post";
+    document.getElementById("post-id").value = post.id || "";
+    document.getElementById("post-date").value = post.date || formatDateISO(new Date());
+    document.getElementById("post-time").value = post.time || "";
+    document.getElementById("post-platform").value = post.platform || "Instagram";
+    document.getElementById("post-status").value = post.status || "Idea";
+    document.getElementById("post-link").value = post.link || "";
+    document.getElementById("post-caption").value = post.caption || "";
+    document.getElementById("post-notes").value = post.notes || "";
+    document.getElementById("post-delete-btn").hidden = !isEdit;
+    modal.hidden = false;
+    document.getElementById("post-date").focus();
+  }
+
+  function closePostModal() { modal.hidden = true; }
+
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) closePostModal();
+  });
+  document.getElementById("post-cancel-btn").addEventListener("click", closePostModal);
+
+  document.getElementById("post-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var id = document.getElementById("post-id").value;
+    var postData = {
+      id: id || uid(),
+      date: document.getElementById("post-date").value,
+      time: document.getElementById("post-time").value,
+      platform: document.getElementById("post-platform").value,
+      status: document.getElementById("post-status").value,
+      link: document.getElementById("post-link").value.trim(),
+      caption: document.getElementById("post-caption").value.trim(),
+      notes: document.getElementById("post-notes").value.trim()
+    };
+    if (!postData.date) return;
+    if (id) {
+      var idx = data.posts.findIndex(function (p) { return p.id === id; });
+      if (idx > -1) data.posts[idx] = postData;
+    } else {
+      data.posts.push(postData);
+    }
+    save();
+    closePostModal();
+    renderCalendar();
+    renderPostList();
+  });
+
+  document.getElementById("post-delete-btn").addEventListener("click", function () {
+    var id = document.getElementById("post-id").value;
+    if (id) {
+      data.posts = data.posts.filter(function (p) { return p.id !== id; });
+      save();
+    }
+    closePostModal();
+    renderCalendar();
+    renderPostList();
+  });
+
+  // ---------- Export month as a standalone shareable page ----------
+  var EXPORT_STYLE =
+    "@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');" +
+    "*{box-sizing:border-box;}" +
+    "body{margin:0;background:#0b0b0d;color:#ede1c4;font-family:'EB Garamond',Georgia,serif;padding:40px 16px;}" +
+    ".ex-wrap{max-width:760px;margin:0 auto;}" +
+    "h1{font-family:'Cinzel',Georgia,serif;text-align:center;margin:0;font-size:2rem;letter-spacing:0.05em;color:#ede1c4;}" +
+    ".ex-month{font-family:'Cinzel',Georgia,serif;text-align:center;margin:6px 0 0;font-weight:600;font-size:1.2rem;color:#a89a7c;}" +
+    ".ex-band{position:relative;height:150px;margin:26px 0;overflow:hidden;border-top:3px solid #7c0f1e;border-bottom:3px solid #7c0f1e;background:#0b0b0d;}" +
+    ".ex-band::before{content:'';position:absolute;top:0;left:0;width:100%;height:68px;transform-origin:top;transform:scaleY(2.2) translateZ(0);backface-visibility:hidden;background-color:#efe6d0;background-image:linear-gradient(45deg,#0b0b0d 25%,transparent 25%),linear-gradient(-45deg,#0b0b0d 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#0b0b0d 75%),linear-gradient(-45deg,transparent 75%,#0b0b0d 75%);background-size:22.667px 22.667px;}" +
+    "@media (max-width:480px){.ex-band{height:92px;}.ex-band::before{height:42px;background-size:14px 14px;}}" +
+    ".ex-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:32px;}" +
+    ".ex-dow{text-align:center;font-size:0.68rem;font-family:'Cinzel',serif;letter-spacing:0.05em;color:#a89a7c;padding-bottom:4px;}" +
+    ".ex-cell{background:#efe6d0;border:1px solid #c9ba90;border-radius:3px;min-height:50px;padding:5px;display:flex;flex-direction:column;gap:3px;}" +
+    ".ex-cell-empty{background:transparent;border:none;}" +
+    ".ex-daynum{font-size:0.75rem;color:#6e6452;}" +
+    ".ex-dots{display:flex;flex-wrap:wrap;gap:3px;}" +
+    ".ex-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}" +
+    ".ex-list-heading{font-family:'Cinzel',Georgia,serif;color:#ede1c4;font-size:1.15rem;margin:0 0 14px;}" +
+    ".ex-post-list{display:flex;flex-direction:column;gap:12px;}" +
+    ".ex-post{background:#efe6d0;color:#201a13;border:1px solid #c9ba90;border-radius:4px;padding:14px 16px;box-shadow:0 3px 10px rgba(0,0,0,0.5);}" +
+    ".ex-post-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;}" +
+    ".ex-post-date{font-size:0.9rem;color:#6e6452;}" +
+    ".ex-chip{font-size:0.72rem;padding:2px 10px;border-radius:999px;color:#ede1c4;}" +
+    ".ex-status{font-size:0.7rem;padding:3px 10px;border-radius:999px;margin-left:auto;font-family:'Cinzel',serif;letter-spacing:0.02em;}" +
+    ".ex-caption{font-size:1rem;margin:0 0 8px;white-space:pre-wrap;}" +
+    ".ex-notes{font-size:0.88rem;color:#6e6452;margin:0 0 8px;white-space:pre-wrap;}" +
+    ".ex-link{color:#7c0f1e;text-decoration:none;font-size:0.9rem;border-bottom:1px solid #7c0f1e;}" +
+    ".ex-empty{text-align:center;color:#a89a7c;font-style:italic;}" +
+    ".ex-footer{text-align:center;color:#4a4436;font-size:0.8rem;margin-top:36px;}";
+
+  function buildMonthExportHtml(viewDate) {
+    var year = viewDate.getFullYear(), month = viewDate.getMonth();
+    var monthName = viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    var monthPosts = data.posts.filter(function (p) {
+      var d = new Date(p.date + "T00:00:00");
+      return d.getFullYear() === year && d.getMonth() === month;
+    }).sort(function (a, b) { return (a.date + " " + (a.time || "")).localeCompare(b.date + " " + (b.time || "")); });
+
+    var postsByDate = {};
+    monthPosts.forEach(function (p) { (postsByDate[p.date] = postsByDate[p.date] || []).push(p); });
+
+    var firstOfMonth = new Date(year, month, 1);
+    var startOffset = (firstOfMonth.getDay() + 6) % 7;
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    var gridCells = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(function (l) {
+      return '<div class="ex-dow">' + l + "</div>";
+    }).join("");
+    for (var i = 0; i < startOffset; i++) gridCells += '<div class="ex-cell ex-cell-empty"></div>';
+    for (var day = 1; day <= daysInMonth; day++) {
+      var iso = formatDateISO(new Date(year, month, day));
+      var dayPosts = postsByDate[iso] || [];
+      var dots = dayPosts.map(function (p) {
+        return '<span class="ex-dot" style="background:' + platformColor(p.platform) + '" title="' + escapeHtml(p.platform) + '"></span>';
+      }).join("");
+      gridCells += '<div class="ex-cell"><span class="ex-daynum">' + day + '</span><div class="ex-dots">' + dots + "</div></div>";
+    }
+
+    var listHtml;
+    if (monthPosts.length === 0) {
+      listHtml = '<p class="ex-empty">No posts planned for ' + escapeHtml(monthName) + ".</p>";
+    } else {
+      listHtml = monthPosts.map(function (p) {
+        var colors = statusExportColors(p.status);
+        var linkHtml = (p.link && isSafeUrl(p.link))
+          ? '<a class="ex-link" href="' + escapeHtml(p.link) + '" target="_blank" rel="noopener noreferrer">View post ↗</a>'
+          : "";
+        return (
+          '<div class="ex-post">' +
+            '<div class="ex-post-head">' +
+              '<span class="ex-post-date">' + formatDateDisplay(p.date) + (p.time ? " · " + formatTimeDisplay(p.time) : "") + "</span>" +
+              '<span class="ex-chip" style="background:' + platformColor(p.platform) + '">' + escapeHtml(p.platform) + "</span>" +
+              '<span class="ex-status" style="background:' + colors.bg + ";color:" + colors.fg + '">' + escapeHtml(p.status) + "</span>" +
+            "</div>" +
+            (p.caption ? '<p class="ex-caption">' + escapeHtml(p.caption) + "</p>" : "") +
+            (p.notes ? '<p class="ex-notes">' + escapeHtml(p.notes) + "</p>" : "") +
+            linkHtml +
+          "</div>"
+        );
+      }).join("");
+    }
+
+    var exportedOn = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+
+    return (
+      '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+      "<title>Social Calendar — " + escapeHtml(monthName) + "</title>" +
+      "<style>" + EXPORT_STYLE + "</style>" +
+      "</head><body>" +
+      '<div class="ex-wrap">' +
+        "<h1>Social Media Calendar</h1>" +
+        '<h2 class="ex-month">' + escapeHtml(monthName) + "</h2>" +
+        '<div class="ex-band"></div>' +
+        '<div class="ex-grid">' + gridCells + "</div>" +
+        '<h3 class="ex-list-heading">Posts This Month</h3>' +
+        '<div class="ex-post-list">' + listHtml + "</div>" +
+        '<p class="ex-footer">Exported ' + exportedOn + "</p>" +
+      "</div>" +
+      "</body></html>"
+    );
+  }
+
+  document.getElementById("export-month-btn").addEventListener("click", function () {
+    var html = buildMonthExportHtml(calViewDate);
+    var blob = new Blob([html], { type: "text/html" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    var fname = calViewDate.getFullYear() + "-" + String(calViewDate.getMonth() + 1).padStart(2, "0");
+    a.download = "social-calendar-" + fname + ".html";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // ---------- Backup / restore ----------
+  document.getElementById("export-btn").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "weekly-planner-backup-" + formatDateISO(new Date()) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("import-input").addEventListener("change", function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var parsed = JSON.parse(reader.result);
+        if (!confirm("Importing will replace your current data in this browser. Continue?")) return;
+        var d = defaultData();
+        if (parsed.todos) {
+          Object.keys(d.todos).forEach(function (k) {
+            if (Array.isArray(parsed.todos[k])) d.todos[k] = parsed.todos[k];
+          });
+        }
+        if (parsed.completions) d.completions = parsed.completions;
+        if (Array.isArray(parsed.posts)) d.posts = parsed.posts;
+        data = d;
+        save();
+        renderAll();
+        alert("Import complete.");
+      } catch (err) {
+        alert("That file could not be read as a backup.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  // ---------- Init ----------
+  function renderAll() {
+    renderToday();
+    renderManage();
+    renderCalendar();
+    renderPostList();
+  }
+
+  renderAll();
+
+  // Roll the Today view over automatically if the app is left open past midnight
+  var lastKnownDate = formatDateISO(new Date());
+  setInterval(function () {
+    var nowIso = formatDateISO(new Date());
+    if (nowIso !== lastKnownDate) {
+      lastKnownDate = nowIso;
+      renderToday();
+      renderManage();
+    }
+  }, 60000);
+})();
+</script>
+</body>
+</html>
